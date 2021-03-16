@@ -2,6 +2,8 @@
 
 ProxyLogon Full Exploit Chain PoC (CVE-2021–26855, CVE-2021–26857, CVE-2021–26858, CVE-2021–27065)
 
+![demo](demo/demo.png)
+
 ```bash
 Usage: exprolog.py [OPTIONS]
 
@@ -10,9 +12,11 @@ Usage: exprolog.py [OPTIONS]
   (CVE-2021–26855, CVE-2021–26857, CVE-2021–26858, CVE-2021–27065)
 
 Options:
-  -t, --target TEXT  Target MS Exchange Server (e.g. outlook.victim.corm)
-  -e, --email TEXT   Target email (e.g. administrator@victim.corp)
-  --help             Show this message and exit.
+  -t, --target TEXT       MS Exchange Server (e.g. outlook.victim.corp).
+  -e, --email TEXT        Email (e.g. administrator@victim.corp).
+  -x, --execute TEXT      Execute verification shell.
+  -i, --interactive TEXT  Run interactive shell.
+  --help                  Show this message and exit.
 ```
 
 ## License

